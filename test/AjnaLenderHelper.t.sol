@@ -43,7 +43,7 @@ contract AjnaLenderHelperTest is Test {
         _pool.approveLPTransferors(transferors);
     }
 
-    function testDeposit() external {
+    function testAddLiquidity() external {
         changePrank(_lender);
 
         // check starting balances
@@ -61,8 +61,47 @@ contract AjnaLenderHelperTest is Test {
         assertEq(_quote.balanceOf(address(_alh)), 0);
         assertEq(_quote.balanceOf(address(_pool)), 95.04 * 1e18);
 
-        // confirm lender received LP in the bucket
+        // confirm lender received LP in the bucket and helper has no LP
         (uint256 lpBalance, ) = _pool.lenderInfo(923, address(_lender));
         assertEq(lpBalance, 95.035660273972602740 * 1e18);
+        (lpBalance, ) = _pool.lenderInfo(923, address(_alh));
+        assertEq(lpBalance, 0);
+    }
+
+    function testMoveLiquidity() external {
+        changePrank(_lender);
+
+        // deposit directly through pool
+        _pool.addQuoteToken(100 * 1e18, 901, block.timestamp);
+
+        // confirm tokens are in expected places
+        assertEq(_quote.balanceOf(address(_lender)), 0);
+        assertEq(_quote.balanceOf(address(_alh)), 0);
+        assertEq(_quote.balanceOf(address(_pool)), 100 * 1e18);
+
+        // TODO: How can we move allowance setup to the helper?
+        uint256[] memory buckets = new uint256[](1);
+        buckets[0] = 901;
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = 100 * 1e18;
+        _pool.increaseLPAllowance(address(_alh), buckets, amounts);
+
+        // move liquidity through helper
+        _alh.moveQuoteToken(address(_pool), 75 * 1e18, 901, 955, block.timestamp);
+
+        // confirm token balances unchanged
+        assertEq(_quote.balanceOf(address(_lender)), 0);
+        assertEq(_quote.balanceOf(address(_alh)), 0);
+        assertEq(_quote.balanceOf(address(_pool)), 100 * 1e18);
+
+        // confirm lender has LP in the appropriate buckets and helper has no LP
+        (uint256 lpBalance, ) = _pool.lenderInfo(901, address(_lender));
+        assertEq(lpBalance, 24.995433789954337900 * 1e18);
+        (lpBalance, ) = _pool.lenderInfo(955, address(_lender));
+        assertEq(lpBalance, 74.996575342465753425 * 1e18);
+        (lpBalance, ) = _pool.lenderInfo(901, address(_alh));
+        assertEq(lpBalance, 0);
+        (lpBalance, ) = _pool.lenderInfo(955, address(_alh));
+        assertEq(lpBalance, 0);
     }
 }

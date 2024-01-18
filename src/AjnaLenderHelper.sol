@@ -15,32 +15,62 @@ contract AjnaLenderHelper {
         uint256 index_,
         uint256 expiry_
     ) external returns (uint256 bucketLP_, uint256 addedAmount_) {
-        uint256 amount_ = maxAmount_;
+        uint256 amount = maxAmount_;
         IPool pool = IPool(pool_);
 
         // TODO: validate or adjust amount as appropriate
 
         // perform the deposit
-        _transferQuoteTokenFrom(msg.sender, amount_, pool);
-        (bucketLP_, addedAmount_) = pool.addQuoteToken(amount_, index_, expiry_);
+        _transferQuoteTokenFrom(msg.sender, amount, pool);
+        (bucketLP_, addedAmount_) = pool.addQuoteToken(amount, index_, expiry_);
 
         // set LP allowances
-        uint256[] memory transferIndexes = new uint256[](1);
-        transferIndexes[0] = index_;
+        uint256[] memory buckets = new uint256[](1);
+        buckets[0] = index_;
         uint256[] memory amounts = new uint256[](1);
-        amounts[0] = type(uint256).max; //amount_;
-        pool.increaseLPAllowance(address(msg.sender), transferIndexes, amounts);
+        amounts[0] = amount;
+        pool.increaseLPAllowance(address(msg.sender), buckets, amounts);
 
         // return LP to msg.sender
-        uint256[] memory bucket = new uint256[](1);
-        bucket[0] = index_;
-        pool.transferLP(address(this), msg.sender, bucket);
+        pool.transferLP(address(this), msg.sender, buckets);
+    }
+
+    function moveQuoteToken(
+        address pool_,
+        uint256 maxAmount_,
+        uint256 fromIndex_,
+        uint256 toIndex_,
+        uint256 expiry_
+    ) external returns (uint256 fromBucketLP_, uint256 toBucketLP_, uint256 movedAmount_) {
+        uint256 amount = maxAmount_;
+        IPool pool = IPool(pool_);
+
+        // TODO: validate or adjust amount as appropriate based on toIndex_ state
+
+        // transfer lender's LP to helper
+        uint256[] memory buckets = new uint256[](1);
+        buckets[0] = fromIndex_;
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = amount;
+        pool.transferLP(msg.sender, address(this), buckets);
+
+        // move the liquidity
+        (fromBucketLP_, toBucketLP_, movedAmount_) = pool.moveQuoteToken(amount, fromIndex_, toIndex_, expiry_);
+
+        // transfer remaining LP in fromBucket back to lender
+        amounts[0] = fromBucketLP_;
+        pool.increaseLPAllowance(address(msg.sender), buckets, amounts);
+        pool.transferLP(address(this), msg.sender, buckets);
+
+        // transfer LP in toBucket back to lender
+        amounts[0] = toBucketLP_;
+        buckets[0] = toIndex_;
+        pool.increaseLPAllowance(address(msg.sender), buckets, amounts);
+        pool.transferLP(address(this), msg.sender, buckets);
     }
 
     function _transferQuoteTokenFrom(address from_, uint256 amount_, IPool pool_) internal {
         uint256 transferAmount = Maths.ceilDiv(amount_, pool_.quoteTokenScale());
         IERC20(pool_.quoteTokenAddress()).safeTransferFrom(from_, address(this), transferAmount);
     }
-
-    // TODO: moveQuoteToken
 }
