@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import { Test, console2 } from "forge-std/Test.sol";
+import { Test, console2 }   from "forge-std/Test.sol";
 import { AjnaLenderHelper } from "../src/AjnaLenderHelper.sol";
-import { ERC20Pool }           from '@ajna-core/ERC20Pool.sol';
-import { ERC20PoolFactory }    from '@ajna-core/ERC20PoolFactory.sol';
-import { Token }               from '@ajna-core-test/utils/Tokens.sol';
+import { ERC20Pool }        from '@ajna-core/ERC20Pool.sol';
+import { ERC20PoolFactory } from '@ajna-core/ERC20PoolFactory.sol';
+import { Token }            from '@ajna-core-test/utils/Tokens.sol';
 
 contract AjnaLenderHelperTest is Test {
     ERC20PoolFactory internal _poolFactory;
@@ -34,7 +34,6 @@ contract AjnaLenderHelperTest is Test {
         _lender = makeAddr("lender");
         deal(address(_quote), _lender, 100 * 1e18);
         changePrank(_lender);
-        _quote.approve(address(_pool), type(uint256).max);
         _quote.approve(address(_alh),  type(uint256).max);
 
         // TODO: discuss moving approvals into the helper itself
@@ -66,12 +65,17 @@ contract AjnaLenderHelperTest is Test {
         assertEq(lpBalance, 95.035660273972602740 * 1e18);
         (lpBalance, ) = _pool.lenderInfo(923, address(_alh));
         assertEq(lpBalance, 0);
+
+        // confirm LP allowance is 0
+        uint256 allowance = _pool.lpAllowance(923, _lender, address(_alh));
+        assertEq(allowance, 0);
     }
 
-    function testMoveLiquidity() external {
+    function testMovePartialLiquidity() external {
         changePrank(_lender);
 
         // deposit directly through pool
+        _quote.approve(address(_pool), 100 * 1e18);
         _pool.addQuoteToken(100 * 1e18, 901, block.timestamp);
 
         // confirm tokens are in expected places
@@ -79,14 +83,14 @@ contract AjnaLenderHelperTest is Test {
         assertEq(_quote.balanceOf(address(_alh)), 0);
         assertEq(_quote.balanceOf(address(_pool)), 100 * 1e18);
 
-        // TODO: How can we move allowance setup to the helper?
+        // set allowances for helper
         uint256[] memory buckets = new uint256[](1);
         buckets[0] = 901;
         uint256[] memory amounts = new uint256[](1);
         amounts[0] = 100 * 1e18;
         _pool.increaseLPAllowance(address(_alh), buckets, amounts);
 
-        // move liquidity through helper
+        // move partial liquidity through helper
         _alh.moveQuoteToken(address(_pool), 75 * 1e18, 901, 955, block.timestamp);
 
         // confirm token balances unchanged
@@ -103,5 +107,49 @@ contract AjnaLenderHelperTest is Test {
         assertEq(lpBalance, 0);
         (lpBalance, ) = _pool.lenderInfo(955, address(_alh));
         assertEq(lpBalance, 0);
+
+        // confirm LP allowances are 0
+        uint256 allowance = _pool.lpAllowance(901, address(_alh), _lender);
+        assertEq(allowance, 0);
+        allowance = _pool.lpAllowance(901, _lender, address(_alh));
+        assertEq(allowance, 0);
+        allowance = _pool.lpAllowance(955, _lender, address(_alh));
+        assertEq(allowance, 0);
+    }
+
+    function testMoveAllLiquidity() external {
+        changePrank(_lender);
+
+        // deposit directly through pool
+        _quote.approve(address(_pool), 50 * 1e18);
+        _pool.addQuoteToken(50 * 1e18, 908, block.timestamp);
+
+        // set allowances for helper
+        uint256[] memory buckets = new uint256[](1);
+        buckets[0] = 908;
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = 50 * 1e18;
+        _pool.increaseLPAllowance(address(_alh), buckets, amounts);
+
+        // move liquidity using maxAmount higher than deposit
+        _alh.moveQuoteToken(address(_pool), 55 * 1e18, 908, 936, block.timestamp);
+
+        // confirm lender has LP in the appropriate buckets and helper has no LP
+        (uint256 lpBalance, ) = _pool.lenderInfo(908, address(_lender));
+        assertEq(lpBalance, 0);
+        (lpBalance, ) = _pool.lenderInfo(936, address(_lender));
+        assertEq(lpBalance, 49.995433894205708806 * 1e18);
+        (lpBalance, ) = _pool.lenderInfo(908, address(_alh));
+        assertEq(lpBalance, 0);
+        (lpBalance, ) = _pool.lenderInfo(936, address(_alh));
+        assertEq(lpBalance, 0);
+
+        // confirm LP allowances are 0
+        uint256 allowance = _pool.lpAllowance(908, address(_alh), _lender);
+        assertEq(allowance, 0);
+        allowance = _pool.lpAllowance(908, _lender, address(_alh));
+        assertEq(allowance, 0);
+        allowance = _pool.lpAllowance(936, _lender, address(_alh));
+        assertEq(allowance, 0);
     }
 }
