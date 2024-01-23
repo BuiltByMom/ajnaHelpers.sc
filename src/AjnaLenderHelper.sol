@@ -17,6 +17,11 @@ contract AjnaLenderHelper {
     using SafeERC20 for IERC20;
 
     /**
+     *  @notice Smallest amount which would minimize rounding error is, inexplicably, greater than maxAmount specified.
+     */
+    error RoundedAmountExceededRequestedMaximum();
+
+    /**
      *  @notice Called by lenders to deposit into specified price bucket with protection against exchange rate manipulation.
      *  @param  pool_        Address of the pool in which quote token shall be added.
      *  @param  maxAmount_   The maximum amount of quote token lender wishes to add (`WAD` precision).
@@ -150,28 +155,33 @@ contract AjnaLenderHelper {
             An additional wrinkle is introduced by the deposit fee factor, which we first scale the quantity down and then up.
         **/
 
+        uint256 exchangeRate = Buckets.getExchangeRate(collateral, bucketLP, quoteTokens, _priceAt(index_));
+
         if (applyDepositFee_) {
             (uint256 interestRate, ) = pool_.interestRateInfo();
-            uint256 exchangeRate     = Buckets.getExchangeRate(collateral, bucketLP, quoteTokens, _priceAt(index_));
             uint256 depositFeeFactor = Maths.WAD - _depositFeeRate(interestRate);
 
-            // Revert if adding quote tokens are not sufficient to get even 1 LP token.
-            if (Maths.wmul(maxAmount_, depositFeeFactor) * 1e18 <= exchangeRate) revert IPoolErrors.InsufficientLP();
-
-            // this is the exact amount that would be passed into quoteTokensToLPs, so want to match it's awarded LPs
+            // exact amount that would be passed into quoteTokensToLPs, so want to match it's awarded LPs
             uint256 postFeeMaxAmount = Maths.wmul(maxAmount_, depositFeeFactor);
-            uint256 denominator = quoteTokens * Maths.WAD + collateral * _priceAt(index_);
-            // this will the the smallest amount we could pass in with same resulting LPs
+            // revert if adding quote tokens are not sufficient to get even 1 LP token
+            if (postFeeMaxAmount * 1e18 <= exchangeRate) revert IPoolErrors.InsufficientLP();
 
-            // Theoretically should be as follows, but using mulDiv with slightly larger value to avoid overflow
+            uint256 denominator = quoteTokens * Maths.WAD + collateral * _priceAt(index_);
+
+            // smallest amount we could pass in with same resulting LPs
             uint256 minAmountWithSameLPs = ((postFeeMaxAmount * bucketLP * Maths.WAD - 1) / denominator * denominator) / (bucketLP * Maths.WAD) + 1;
 
             // this should be an amount <= maxAmount that gives minAmountWithSameLPs after wmul with depositFeeFactor
             amount_ = Maths.min(maxAmount_, Maths.ceilWdiv(minAmountWithSameLPs, depositFeeFactor));
+
+            // backup revert... should never happen
+            if(Maths.wmul(amount_, depositFeeFactor) < minAmountWithSameLPs) revert RoundedAmountExceededRequestedMaximum();
         } else {
+            if (maxAmount_ * 1e18 <= exchangeRate) revert IPoolErrors.InsufficientLP();
             uint256 denominator = quoteTokens * Maths.WAD + collateral * _priceAt(index_);
-            uint256 minAmountWithSameLPs = ((maxAmount_ * bucketLP * Maths.WAD - 1) / denominator * denominator) / (bucketLP * Maths.WAD) + 1;
-            amount_ = Maths.min(maxAmount_, minAmountWithSameLPs);
+            amount_ = ((maxAmount_ * bucketLP * Maths.WAD - 1) / denominator * denominator) / (bucketLP * Maths.WAD) + 1;
+            // backup revert... should never happen
+            if(maxAmount_ < amount_) revert RoundedAmountExceededRequestedMaximum();
         }
     }
 }
