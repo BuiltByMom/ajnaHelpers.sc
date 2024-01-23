@@ -138,7 +138,7 @@ contract AjnaLenderHelper {
      *  @param  pool_            Pool in which quote token is being added/moved.
      *  @return amount_ The adjusted amount, in `WAD` units.
      */
-    function _adjustQuantity(uint256 index_, uint256 maxAmount_, bool applyDepositFee_, IPool pool_) public view returns (uint256 amount_) {
+    function _adjustQuantity(uint256 index_, uint256 maxAmount_, bool applyDepositFee_, IPool pool_) internal view returns (uint256 amount_) {
         (uint256 bucketLP, uint256 collateral, , uint256 quoteTokens, ) = pool_.bucketInfo(index_);
         if (bucketLP == 0) return maxAmount_;
 
@@ -155,9 +155,6 @@ contract AjnaLenderHelper {
             uint256 exchangeRate     = Buckets.getExchangeRate(collateral, bucketLP, quoteTokens, _priceAt(index_));
             uint256 depositFeeFactor = Maths.WAD - _depositFeeRate(interestRate);
 
-            // TODO: delete; more gas effecient to just let this corner case revert naturally
-            // if (maxAmount_ > type(uint256).max / 1e18 / depositFeeFactor) revert AmountOverflow();
-
             // Revert if adding quote tokens are not sufficient to get even 1 LP token.
             if (Maths.wmul(maxAmount_, depositFeeFactor) * 1e18 <= exchangeRate) revert IPoolErrors.InsufficientLP();
 
@@ -171,9 +168,6 @@ contract AjnaLenderHelper {
 
             // this should be an amount <= maxAmount that gives minAmountWithSameLPs after wmul with depositFeeFactor
             amount_ = Maths.min(maxAmount_, Maths.ceilWdiv(minAmountWithSameLPs, depositFeeFactor));
-
-            // TODO: remove backup revert to save gas; should never happen
-            // if(Maths.wmul(amount_, depositFeeFactor) < minAmountWithSameLPs) revert RoundedAmountExceededRequestedAmount();
         } else {
             uint256 denominator = quoteTokens * Maths.WAD + collateral * _priceAt(index_);
             uint256 minAmountWithSameLPs = ((maxAmount_ * bucketLP * Maths.WAD - 1) / denominator * denominator) / (bucketLP * Maths.WAD) + 1;
