@@ -27,8 +27,6 @@ contract AjnaLenderHelperTest is Test {
 
         // create the helper
         _alh = new AjnaLenderHelper();
-        changePrank(address(_alh));
-        _quote.approve(address(_pool), type(uint256).max);
 
         // configure a lender
         _lender = makeAddr("lender");
