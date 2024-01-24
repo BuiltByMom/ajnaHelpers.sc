@@ -165,10 +165,9 @@ contract AjnaLenderHelper {
             uint256 postFeeMaxAmount = Maths.wmul(maxAmount_, depositFeeFactor);
             // revert if adding quote tokens are not sufficient to get even 1 LP token
             if (postFeeMaxAmount * 1e18 <= exchangeRate) revert IPoolErrors.InsufficientLP();
-
             uint256 denominator = quoteTokens * Maths.WAD + collateral * _priceAt(index_);
 
-            // smallest amount we could pass in with same resulting LPs
+            // calculate the smallest amount we could pass in with same resulting LPs as postFeeMaxAmount
             uint256 minAmountWithSameLPs = ((postFeeMaxAmount * bucketLP * Maths.WAD - 1) / denominator * denominator) / (bucketLP * Maths.WAD) + 1;
 
             // this should be an amount <= maxAmount that gives minAmountWithSameLPs after wmul with depositFeeFactor
@@ -177,9 +176,13 @@ contract AjnaLenderHelper {
             // backup revert... should never happen
             if(Maths.wmul(amount_, depositFeeFactor) < minAmountWithSameLPs) revert RoundedAmountExceededRequestedMaximum();
         } else {
+            // revert if adding quote tokens are not sufficient to get even 1 LP token
             if (maxAmount_ * 1e18 <= exchangeRate) revert IPoolErrors.InsufficientLP();
             uint256 denominator = quoteTokens * Maths.WAD + collateral * _priceAt(index_);
+
+            // calculate the smallest amount we could pass in with same resulting LPs as postFeeMaxAmount
             amount_ = ((maxAmount_ * bucketLP * Maths.WAD - 1) / denominator * denominator) / (bucketLP * Maths.WAD) + 1;
+
             // backup revert... should never happen
             if(maxAmount_ < amount_) revert RoundedAmountExceededRequestedMaximum();
         }

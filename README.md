@@ -1,66 +1,37 @@
-## Foundry
+## Installation
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
-
-Foundry consists of:
-
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
-
-## Documentation
-
-https://book.getfoundry.sh/
-
-## Usage
-
-### Build
-
+1. Install Foundry [instructions](https://github.com/gakonst/foundry/blob/master/README.md#installation)
+1. Install the [foundry](https://github.com/gakonst/foundry) toolchain installer (`foundryup`), update `forge` binaries, and install submodules:
 ```shell
-$ forge build
+curl -L https://foundry.paradigm.xyz | bash
+foundryup
+git submodule update --init --recursive
 ```
 
-### Test
+## Development
 
-```shell
+Building and running unit tests is straightforward.
+```
+$ forge build
 $ forge test
 ```
 
-### Format
+## Deployment
 
+Set environment variables found below, as well as `ETHERSCAN_API_KEY`. This assumes best-practice of using a JSON keystore file, as plaintext private keys are insecure. Password challenge will be interactive. Note the deployment script will output the expected address for the contract based on the deployer EOA's nonce, before the contract was actually deployed.
 ```shell
-$ forge fmt
+	forge script script/deploy.s.sol \
+		--rpc-url ${ETH_RPC_URL} --sender ${DEPLOY_ADDRESS} --keystore ${DEPLOY_KEY} --broadcast -vvv --verify
 ```
 
-### Gas Snapshots
+⚠ If you run out of funds deploying, or deployment fails for some other reason, add `--resume` before rerunning. Failure to do so will result in duplicate contract deployments and a drained wallet.
 
-```shell
-$ forge snapshot
-```
+If deploying to an OP stack chain (Optimism, Base, etc.), recommend including `--legacy --slow` parameters. Each chain generally has their own blockchain explorer.  For chains other than mainnet and sepolia, create an accoount and API key for each explorer, and set `ETHERSCAN_API_KEY` as appropriate for each chain.  , set `--verifier-url` accordingly.  Here is a partial list:
+| chain | explorer | --verifier-url |
+| ----- | -------- | ------------- |
+| Arbitrum One | https://arbiscan.io/ | `https://api.arbiscan.io/api`  |
+| Base         | https://basescan.org/ | `https://api.basescan.org/api` |
+| Optimism     | https://optimistic.etherscan.io/ | `https://api-optimistic.etherscan.io/api`|
+| Polygon PoS  | https://polygonscan.com/ | `https://api.polygonscan.com/api` |
 
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+If contract verification fails on the first pass, add `--resume` and rerun. Tooling should not challenge you for private keystore password if contracts were fully deployed.

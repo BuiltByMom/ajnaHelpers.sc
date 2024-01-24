@@ -36,7 +36,7 @@ contract AjnaLenderHelperTest is Test {
         changePrank(_lender);
         _quote.approve(address(_alh),  type(uint256).max);
 
-        // TODO: discuss moving approvals into the helper itself
+        // approve the helper as an LP transferror for this EOA (allowance to be set later)
         address[] memory transferors = new address[](1);
         transferors[0] = address(_alh);
         _pool.approveLPTransferors(transferors);
