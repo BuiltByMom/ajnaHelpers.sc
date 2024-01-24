@@ -41,6 +41,7 @@ contract AjnaLenderHelper {
 
         // perform the deposit
         _transferQuoteTokenFrom(msg.sender, amount, pool);
+        _approveForPool(pool, amount);
         (bucketLP_, addedAmount_) = pool.addQuoteToken(amount, index_, expiry_);
 
         // set LP allowances
@@ -101,6 +102,20 @@ contract AjnaLenderHelper {
         buckets[0] = toIndex_;
         pool.increaseLPAllowance(address(msg.sender), buckets, amounts);
         pool.transferLP(address(this), msg.sender, buckets);
+    }
+
+    /**
+     *  @notice Called implicitly by addQuoteToken to allow pool to spend the helper's quote token if needed.
+     *  @param  pool_              Pool lender wishes to interact with through the helper.
+     *  @param  allowanceRequired_ If current allowance lower than this amount, token approval will be performed.
+     */
+    function _approveForPool(IPool pool_, uint256 allowanceRequired_) internal {
+        IERC20 token = IERC20(pool_.quoteTokenAddress());
+        if (token.allowance(address(this), address(pool_)) < allowanceRequired_)
+        {   // If approval insufficient, run a blanket approval for helper.
+            // This saves gas for subsequent lenders using the helper.
+            token.approve(address(pool_), type(uint256).max);
+        }
     }
 
     /**
