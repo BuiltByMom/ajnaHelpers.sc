@@ -114,7 +114,12 @@ contract AjnaLenderHelper {
         if (token.allowance(address(this), address(pool_)) < allowanceRequired_)
         {   // If approval insufficient, run a blanket approval for helper.
             // This saves gas for subsequent lenders using the helper.
-            token.approve(address(pool_), type(uint256).max);
+            try token.approve(address(pool_), type(uint256).max) {}
+            catch(bytes memory) {
+                // handle tokens which require setting allowance to 0 before adjustment
+                token.approve(address(pool_), 0);
+                token.approve(address(pool_), type(uint256).max);
+            }
         }
     }
 
