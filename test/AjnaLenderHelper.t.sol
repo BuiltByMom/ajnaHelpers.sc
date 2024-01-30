@@ -86,6 +86,7 @@ contract AjnaLenderHelperTest is Test {
         deal(address(_collateral), borrower, pledgedCollateral);
         _collateral.approve(address(_pool), pledgedCollateral);
         _pool.drawDebt(borrower, 150 * 1e18, bucketId + 1, pledgedCollateral);
+        skip(5 days);
 
         changePrank(_lender);
 
@@ -96,7 +97,7 @@ contract AjnaLenderHelperTest is Test {
 
         // deposit through helper
         (uint256 bucketLP, uint256 addedAmount) = _alh.addQuoteToken(address(_pool), 95.04 * 1e18, bucketId, block.timestamp);
-        assertEq(bucketLP, 95.035660273972602740 * 1e18);
+        assertEq(bucketLP, 94.994125672846731752 * 1e18);
         assertEq(addedAmount, 95.035660273972602740 * 1e18);
 
         // confirm tokens are in expected places
@@ -106,7 +107,7 @@ contract AjnaLenderHelperTest is Test {
 
         // confirm lender received LP in the bucket and helper has no LP
         (uint256 lpBalance, ) = _pool.lenderInfo(bucketId, address(_lender));
-        assertEq(lpBalance, 95.035660273972602740 * 1e18);
+        assertEq(lpBalance, 94.994125672846731752 * 1e18);
         (lpBalance, ) = _pool.lenderInfo(bucketId, address(_alh));
         assertEq(lpBalance, 0);
 
