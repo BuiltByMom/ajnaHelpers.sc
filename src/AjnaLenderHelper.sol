@@ -114,7 +114,7 @@ contract AjnaLenderHelper {
         IERC20 token = IERC20(pool_.quoteTokenAddress());
         uint256 currentAllowance = token.allowance(address(this), address(pool_));
         if (currentAllowance < allowanceRequired_) {
-            // If approval insufficient, run a blanket approval for hel
+            // If approval insufficient, run a blanket approval for helper.
             // This saves gas for subsequent lenders using the helper.
             uint256 amountToIncrease = type(uint256).max - currentAllowance;
             token.safeIncreaseAllowance(address(pool_), amountToIncrease);
