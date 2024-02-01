@@ -106,20 +106,18 @@ contract AjnaLenderHelper {
 
     /**
      *  @notice Called implicitly by addQuoteToken to allow pool to spend the helper's quote token if needed.
+     *  @dev Use of safeIncreaseAllowance handles ERC20 tokens with unique approval implementations.
      *  @param  pool_              Pool lender wishes to interact with through the helper.
      *  @param  allowanceRequired_ If current allowance lower than this amount, token approval will be performed.
      */
     function _approveForPool(IPool pool_, uint256 allowanceRequired_) internal {
         IERC20 token = IERC20(pool_.quoteTokenAddress());
-        if (token.allowance(address(this), address(pool_)) < allowanceRequired_)
-        {   // If approval insufficient, run a blanket approval for helper.
+        uint256 currentAllowance = token.allowance(address(this), address(pool_));
+        if (currentAllowance < allowanceRequired_) {
+            // If approval insufficient, run a blanket approval for helper.
             // This saves gas for subsequent lenders using the helper.
-            try token.approve(address(pool_), type(uint256).max) {}
-            catch(bytes memory) {
-                // handle tokens which require setting allowance to 0 before adjustment
-                token.approve(address(pool_), 0);
-                token.approve(address(pool_), type(uint256).max);
-            }
+            uint256 amountToIncrease = type(uint256).max - currentAllowance;
+            token.safeIncreaseAllowance(address(pool_), amountToIncrease);
         }
     }
 
