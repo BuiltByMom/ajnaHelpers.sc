@@ -69,6 +69,53 @@ contract AjnaLenderHelperTest is Test {
         assertEq(allowance, 0);
     }
 
+    function testAddWithExistingLiquidity() external {
+        address otherLender = makeAddr("existingLender");
+        address borrower    = makeAddr("borrower");
+        uint256 bucketId    = 901;
+
+        // another lender deposits
+        changePrank(otherLender);
+        deal(address(_quote), otherLender, 200 * 1e18);
+        _quote.approve(address(_pool), 200 * 1e18);
+        _pool.addQuoteToken(200 * 1e18, bucketId, block.timestamp);
+
+        // borrower draws debt
+        changePrank(borrower);
+        uint256 pledgedCollateral = 0.00003 * 1e18;
+        deal(address(_collateral), borrower, pledgedCollateral);
+        _collateral.approve(address(_pool), pledgedCollateral);
+        _pool.drawDebt(borrower, 150 * 1e18, bucketId + 1, pledgedCollateral);
+        skip(5 days);
+
+        changePrank(_lender);
+
+        // check starting balances
+        assertEq(_quote.balanceOf(address(_lender)), 100 * 1e18);
+        assertEq(_quote.balanceOf(address(_alh)), 0);
+        assertEq(_quote.balanceOf(address(_pool)), 50 * 1e18);
+
+        // deposit through helper
+        (uint256 bucketLP, uint256 addedAmount) = _alh.addQuoteToken(address(_pool), 95.04 * 1e18, bucketId, block.timestamp);
+        assertEq(bucketLP, 94.994125672846731752 * 1e18);
+        assertEq(addedAmount, 95.035660273972602740 * 1e18);
+
+        // confirm tokens are in expected places
+        assertEq(_quote.balanceOf(address(_lender)), 4.96 * 1e18);
+        assertEq(_quote.balanceOf(address(_alh)), 0);
+        assertEq(_quote.balanceOf(address(_pool)), 145.04 * 1e18);
+
+        // confirm lender received LP in the bucket and helper has no LP
+        (uint256 lpBalance, ) = _pool.lenderInfo(bucketId, address(_lender));
+        assertEq(lpBalance, 94.994125672846731752 * 1e18);
+        (lpBalance, ) = _pool.lenderInfo(bucketId, address(_alh));
+        assertEq(lpBalance, 0);
+
+        // confirm LP allowance is 0
+        uint256 allowance = _pool.lpAllowance(bucketId, _lender, address(_alh));
+        assertEq(allowance, 0);
+    }
+
     function testMovePartialLiquidity() external {
         changePrank(_lender);
 
