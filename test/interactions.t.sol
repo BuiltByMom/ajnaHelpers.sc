@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import { Test, console2 }   from "forge-std/Test.sol";
+import { Test }   from "forge-std/Test.sol";
 import { AjnaLenderHelper } from "../src/AjnaLenderHelper.sol";
 import { ERC20Pool }        from '@ajna-core/ERC20Pool.sol';
 import { ERC20PoolFactory } from '@ajna-core/ERC20PoolFactory.sol';
@@ -51,7 +51,7 @@ contract LenderHelperInteractionsTest is Test {
         _alh = new AjnaLenderHelper();
 
         // approve the helper as an LP transferror for this EOA (allowance to be set later)
-        changePrank(_lender);
+        vm.startPrank(_lender);
         address[] memory transferors = new address[](1);
         transferors[0] = address(_alh);
         _pool.approveLPTransferors(transferors);
@@ -60,7 +60,7 @@ contract LenderHelperInteractionsTest is Test {
 
     function testAddQtUsdtApproval() public {
 
-        changePrank(_lender);
+        vm.startPrank(_lender);
 
         // lender approves _alh to spend USDT
         // _usdt.approve does not return a boolean causing an EVM revert when the contract is wrapped in OZ's SafeERC20

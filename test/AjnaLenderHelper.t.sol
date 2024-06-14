@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import { Test, console2 }   from "forge-std/Test.sol";
+import { Test }   from "forge-std/Test.sol";
 import { AjnaLenderHelper } from "../src/AjnaLenderHelper.sol";
 import { ERC20Pool }        from '@ajna-core/ERC20Pool.sol';
 import { ERC20PoolFactory } from '@ajna-core/ERC20PoolFactory.sol';
@@ -31,7 +31,7 @@ contract AjnaLenderHelperTest is Test {
         // configure a lender
         _lender = makeAddr("lender");
         deal(address(_quote), _lender, 100 * 1e18);
-        changePrank(_lender);
+        vm.startPrank(_lender);
         _quote.approve(address(_alh),  type(uint256).max);
 
         // approve the helper as an LP transferror for this EOA (allowance to be set later)
@@ -41,7 +41,7 @@ contract AjnaLenderHelperTest is Test {
     }
 
     function testAddLiquidity() external {
-        changePrank(_lender);
+        vm.startPrank(_lender);
 
         // check starting balances
         assertEq(_quote.balanceOf(address(_lender)), 100 * 1e18);
@@ -75,20 +75,20 @@ contract AjnaLenderHelperTest is Test {
         uint256 bucketId    = 901;
 
         // another lender deposits
-        changePrank(otherLender);
+        vm.startPrank(otherLender);
         deal(address(_quote), otherLender, 200 * 1e18);
         _quote.approve(address(_pool), 200 * 1e18);
         _pool.addQuoteToken(200 * 1e18, bucketId, block.timestamp);
 
         // borrower draws debt
-        changePrank(borrower);
+        vm.startPrank(borrower);
         uint256 pledgedCollateral = 0.00003 * 1e18;
         deal(address(_collateral), borrower, pledgedCollateral);
         _collateral.approve(address(_pool), pledgedCollateral);
         _pool.drawDebt(borrower, 150 * 1e18, bucketId + 1, pledgedCollateral);
         skip(5 days);
 
-        changePrank(_lender);
+        vm.startPrank(_lender);
 
         // check starting balances
         assertEq(_quote.balanceOf(address(_lender)), 100 * 1e18);
@@ -117,7 +117,7 @@ contract AjnaLenderHelperTest is Test {
     }
 
     function testMovePartialLiquidity() external {
-        changePrank(_lender);
+        vm.startPrank(_lender);
 
         // deposit directly through pool
         _quote.approve(address(_pool), 100 * 1e18);
@@ -163,7 +163,7 @@ contract AjnaLenderHelperTest is Test {
     }
 
     function testMoveAllLiquidity() external {
-        changePrank(_lender);
+        vm.startPrank(_lender);
 
         // deposit directly through pool
         _quote.approve(address(_pool), 50 * 1e18);
