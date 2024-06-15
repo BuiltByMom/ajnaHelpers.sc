@@ -62,7 +62,7 @@ contract AjnaRemoveQuote {
      ** @return redeemedLP_ The amount of LP redeemed.
      ** @return amountReceived_ The amount of collateral token received.
      *********************************************************************************************/
-    function removeLPCollateral(
+    function removeCollateralToken(
         address poolAddress,
         uint256 bucketIndex,
         uint256 amountToRemove,

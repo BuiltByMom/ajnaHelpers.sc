@@ -134,7 +134,7 @@ contract AjnaRemoveQuoteTest is Test {
         _pool.increaseLPAllowance(address(_arq), buckets, amounts);
 
         uint256 collateralAvailable = _arq.convertLPToCollateral(address(_pool), 923, bucketLPDepositedByUser);
-        (uint256 removedAmount, uint256 redeemedLP, uint256 quoteTransfered) = _arq.removeLPCollateral(
+        (uint256 removedAmount, uint256 redeemedLP, uint256 quoteTransfered) = _arq.removeCollateralToken(
             address(_pool), // Address of the pool in which liquidity shall be removed.
             923, // The bucket bucketIndex from which the quote tokens will be removed.
             collateralAvailable, // The amount of quote token to be removed by a lender.
