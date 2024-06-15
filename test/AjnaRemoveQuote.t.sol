@@ -10,6 +10,8 @@ import { ERC20PoolFactory } from '@ajna-core/ERC20PoolFactory.sol';
 import { Token }            from '@ajna-core-test/utils/Tokens.sol';
 
 contract AjnaRemoveQuoteTest is Test {
+    error BucketIndexOutOfBounds();
+
     ERC20PoolFactory internal _poolFactory;
     ERC20Pool        internal _pool;
     Token            internal _ajna;
@@ -35,46 +37,36 @@ contract AjnaRemoveQuoteTest is Test {
         // configure a lender
         _lender = makeAddr("lender");
         deal(address(_quote), _lender, 100 * 1e18);
+        deal(address(_collateral), _lender, 100 * 1e18);
         vm.startPrank(_lender);
-        _quote.approve(address(_alh),  type(uint256).max);
+        _quote.approve(address(_alh), type(uint256).max);
+        _collateral.approve(address(_pool), type(uint256).max);
 
         // approve the helper as an LP transferror for this EOA (allowance to be set later)
-        address[] memory transferors = new address[](2);
+        address[] memory transferors = new address[](1);
         transferors[0] = address(_alh);
-        transferors[1] = address(_arq);
         _pool.approveLPTransferors(transferors);
     }
 
-    function testAddLiquidity() external {
+    function testAddAndRemoveQuoteLiquidity() external {
         vm.startPrank(_lender);
 
-        // check starting balances
-        console.log("-----------------------------------------------------------------------------------------");
-        console.log("------------------------------------- INITIAL STATE -------------------------------------");
-        console.log("-----------------------------------------------------------------------------------------");
-        console.log("_quote.balanceOf(address(_lender)) :", _quote.balanceOf(address(_lender)));
-        console.log("_quote.balanceOf(address(_alh))    :", _quote.balanceOf(address(_alh)));
-        console.log("_quote.balanceOf(address(_pool))   :", _quote.balanceOf(address(_pool)));
+        /******************************************************************************************
+        ** All this part is linked to the addLiquidity function from the AjnaLenderHelper contract
+        ** and not related to the RemoveQuote contract. It is here to setup the test.
+        *****************************************************************************************/
         assertEq(_quote.balanceOf(address(_lender)), 100 * 1e18);
         assertEq(_quote.balanceOf(address(_alh)), 0);
         assertEq(_quote.balanceOf(address(_pool)), 0);
 
-        // deposit through helper
         (uint256 bucketLP, uint256 addedAmount) = _alh.addQuoteToken(address(_pool), 95.04 * 1e18, 923, block.timestamp);
+
         assertEq(bucketLP, 95.035660273972602740 * 1e18);
         assertEq(addedAmount, 95.035660273972602740 * 1e18);
-
-        console.log("-----------------------------------------------------------------------------------------");
-        console.log("--------------------------------- AFTER ADD QUOTE TOKEN ---------------------------------");
-        console.log("-----------------------------------------------------------------------------------------");
-        console.log("bucketLP                           :", bucketLP);
-        console.log("addedAmount                        :", addedAmount);
-        console.log("_quote.balanceOf(address(_lender)) :", _quote.balanceOf(address(_lender)));
-        console.log("_quote.balanceOf(address(_alh))    :", _quote.balanceOf(address(_alh)));
-        console.log("_quote.balanceOf(address(_pool))   :", _quote.balanceOf(address(_pool)));
         assertEq(_quote.balanceOf(address(_lender)), 4.96 * 1e18);
         assertEq(_quote.balanceOf(address(_alh)), 0);
         assertEq(_quote.balanceOf(address(_pool)), 95.04 * 1e18);
+
         (uint256 lpBalance, ) = _pool.lenderInfo(923, address(_lender));
         assertEq(lpBalance, 95.035660273972602740 * 1e18);
         (lpBalance, ) = _pool.lenderInfo(923, address(_alh));
@@ -83,6 +75,13 @@ contract AjnaRemoveQuoteTest is Test {
         assertEq(allowance, 0);
 
 
+        /******************************************************************************************
+        ** This part is linked to the removeQuoteToken function from the AjnaRemoveQuote contract.
+        ** We first need to know how much the lender can withdraw from the pool and increate the
+        ** allowance for the helper to transfer the LPs.
+        ** Then we can call the removeQuoteToken function to remove the quote token from the pool.
+
+        *****************************************************************************************/
         (uint256 amountToWithdraw, ) = _pool.lenderInfo(923, address(_lender));
         uint256[] memory buckets = new uint256[](1);
         buckets[0] = 923;
@@ -90,19 +89,63 @@ contract AjnaRemoveQuoteTest is Test {
         amounts[0] = amountToWithdraw;
         _pool.increaseLPAllowance(address(_arq), buckets, amounts);
 
-        (uint256 removedAmount, uint256 redeemedLP, uint256 quoteTransfered) = _arq.removeQuoteToken(address(_pool), UINT256_MAX, amountToWithdraw, 923);
+        (uint256 removedAmount, uint256 redeemedLP, uint256 quoteTransfered) = _arq.removeQuoteToken(
+            address(_pool), // Address of the pool in which liquidity shall be removed.
+            923, // The bucket bucketIndex from which the quote tokens will be removed.
+            UINT256_MAX, // The amount of quote token to be removed by a lender.
+            amountToWithdraw // The minimum amount of quote token to be received by a lender.
+        );
+
         assertEq(removedAmount, amountToWithdraw);
         assertEq(redeemedLP, 95.035660273972602740 * 1e18);
-        console.log("-----------------------------------------------------------------------------------------");
-        console.log("--------------------------------- AFTER REM QUOTE TOKEN ---------------------------------");
-        console.log("-----------------------------------------------------------------------------------------");
-        console.log("removedAmount                      :", removedAmount);
-        console.log("redeemedLP                         :", redeemedLP);
-        console.log("quoteTransfered                    :", quoteTransfered);
-        console.log("_quote.balanceOf(address(_lender)) :", _quote.balanceOf(address(_lender)));
-        console.log("_quote.balanceOf(address(_alh))    :", _quote.balanceOf(address(_alh)));
-        console.log("_quote.balanceOf(address(_pool))   :", _quote.balanceOf(address(_pool)));
+        assertEq(removedAmount, 95.035660273972602740 * 1e18);
+        assertEq(quoteTransfered, 95.035660273972602740 * 1e18);
+        assertEq(_quote.balanceOf(address(_alh)), 0);
+        assertApproxEqAbs(_quote.balanceOf(address(_lender)), 100*1e18, 0.01 * 1e18); //Some fees are deducted on deposit
+    }
 
+    function testAddAndRemoveCollateralLiquidity() external {
+        vm.startPrank(_lender);
 
+        /******************************************************************************************
+        ** All this part is linked to the addLiquidity function from the AjnaLenderHelper contract
+        ** and not related to the RemoveQuote contract. It is here to setup the test.
+        *****************************************************************************************/
+        assertEq(_collateral.balanceOf(address(_lender)), 100 * 1e18);
+        assertEq(_collateral.balanceOf(address(_alh)), 0);
+        assertEq(_collateral.balanceOf(address(_pool)), 0);
+
+        uint256 bucketLPDepositedByUser = _pool.addCollateral(95.04 * 1e18, 923, block.timestamp);
+
+        assertEq(_collateral.balanceOf(address(_lender)), 4.96 * 1e18);
+        assertEq(_collateral.balanceOf(address(_alh)), 0);
+        assertEq(_collateral.balanceOf(address(_pool)), 95.04 * 1e18);
+
+        /******************************************************************************************
+        ** This part is linked to the removeQuoteToken function from the AjnaRemoveQuote contract.
+        ** We first need to know how much the lender can withdraw from the pool and increate the
+        ** allowance for the helper to transfer the LPs.
+        ** Then we can call the removeQuoteToken function to remove the quote token from the pool.
+        *****************************************************************************************/
+        uint256[] memory buckets = new uint256[](1);
+        buckets[0] = 923;
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = bucketLPDepositedByUser;
+        _pool.increaseLPAllowance(address(_arq), buckets, amounts);
+
+        uint256 collateralAvailable = _arq.convertLPToCollateral(address(_pool), 923, bucketLPDepositedByUser);
+        (uint256 removedAmount, uint256 redeemedLP, uint256 quoteTransfered) = _arq.removeLPCollateral(
+            address(_pool), // Address of the pool in which liquidity shall be removed.
+            923, // The bucket bucketIndex from which the quote tokens will be removed.
+            collateralAvailable, // The amount of quote token to be removed by a lender.
+            collateralAvailable // The minimum amount of quote token to be received by a lender.
+        );
+
+        assertEq(redeemedLP, bucketLPDepositedByUser);
+        assertEq(removedAmount, collateralAvailable);
+        assertEq(removedAmount, 95.04 * 1e18);
+        assertEq(quoteTransfered, 95.04 * 1e18);
+        assertEq(_collateral.balanceOf(address(_pool)), 0);
+        assertApproxEqAbs(_collateral.balanceOf(address(_lender)), 100*1e18, 0.01 * 1e18); //Some fees are deducted on deposit
     }
 }
