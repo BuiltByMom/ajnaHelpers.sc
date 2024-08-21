@@ -1,18 +1,18 @@
-# AjnaLenderWithdrawEstimator
+# AjnaReader
 
-- Ask for the `AjnaLenderWithdrawEstimator.json` dump file.
-- In Terminal 1, run `anvil -m "talent dust essay arctic input daughter depth force stadium absorb cruel lemon" -a 16 --chain-id 1337 -p 8545 --steps-tracing --load-state snapshots/AjnaLenderWithdrawEstimator.json --auto-impersonate`.
-- In Terminal 2, run `forge create AjnaLenderWithdrawEstimator --rpc-url 127.0.0.1:8545 --private-key 0x2bbf23876aee0b3acd1502986da13a0f714c143fcc8ede8e2821782d75033ad1 --constructor-args 0x6c5c7fD98415168ada1930d44447790959097482`.
+- Ask for the `AjnaReader.json` dump file.
+- In Terminal 1, run `anvil -m "talent dust essay arctic input daughter depth force stadium absorb cruel lemon" -a 16 --chain-id 1337 -p 8545 --steps-tracing --load-state snapshots/AjnaReader.json --auto-impersonate`.
+- In Terminal 2, run `forge create AjnaReader --rpc-url 127.0.0.1:8545 --private-key 0x2bbf23876aee0b3acd1502986da13a0f714c143fcc8ede8e2821782d75033ad1 --constructor-args 0x6c5c7fD98415168ada1930d44447790959097482`.
 - In Terminal 3, run `forge test -vvv --rpc-url http://127.0.0.1:8545`.
 
 ```
-Ran 4 tests for test/AjnaLenderWithdrawEstimator.t.sol:AjnaLenderWithdrawEstimatorTest
-[PASS] testAjnaLenderWithdrawEstimatorWithActiveLiquidation() (gas: 446545)
+Ran 4 tests for test/AjnaReader.t.sol:AjnaReaderTest
+[PASS] testAjnaReaderWithActiveLiquidation() (gas: 446545)
 Logs:
   lpBalance for user: 499977060860708820535
   amount available to withdraw: 0
 
-[PASS] testAjnaLenderWithdrawEstimatorWithAll() (gas: 701793)
+[PASS] testAjnaReaderWithAll() (gas: 701793)
 Logs:
   lpBalance for user: 499977168949771689500
   amount available to withdraw: 499977266586039718337
@@ -21,7 +21,7 @@ Logs:
   lpBalance for user: 0
   New amount available to withdraw: 0
 
-[PASS] testAjnaLenderWithdrawEstimatorWithLUP() (gas: 816216)
+[PASS] testAjnaReaderWithLUP() (gas: 816216)
 Logs:
   lpBalance for user: 499977168949771689500
   amount available to withdraw: 497968449503865484127
@@ -30,7 +30,7 @@ Logs:
   lpBalance for user: 2009768304079548381
   New amount available to withdraw: 0
 
-[PASS] testAjnaLenderWithdrawEstimatorWithLUP2() (gas: 816272)
+[PASS] testAjnaReaderWithLUP2() (gas: 816272)
 Logs:
   lpBalance for user: 999954337899543379000
   amount available to withdraw: 497968449503865484127

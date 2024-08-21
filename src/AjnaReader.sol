@@ -8,7 +8,7 @@ import { PRBMathSD59x18 } from "@prb-math/contracts/PRBMathSD59x18.sol";
 import { PRBMathUD60x18 } from "@prb-math/contracts/PRBMathUD60x18.sol";
 import { PoolInfoUtils } from "@ajna-core/PoolInfoUtils.sol";
 
-contract AjnaLenderWithdrawEstimator {
+contract AjnaReader {
     PoolInfoUtils public immutable poolInfoUtils;
 
     constructor(address poolInfoUtils_){
@@ -99,5 +99,17 @@ contract AjnaLenderWithdrawEstimator {
             }
         }
         return withdrawableAmount;
+    }
+
+    function getInterestRate(address pool_) external returns (uint256) {
+        IPool pool = IPool(pool_);
+
+        (bool success,) = address(pool).call(abi.encodeWithSignature("updateInterest()"));
+        if (!success) {
+            return 0;
+        }
+
+        (uint256 interestRate,) = pool.interestRateInfo();
+        return interestRate;
     }
 }
