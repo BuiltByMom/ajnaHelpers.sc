@@ -1,8 +1,9 @@
 # AjnaLenderWithdrawEstimator
 
-- In Terminal 1, run `anvil -m "talent dust essay arctic input daughter depth force stadium absorb cruel lemon" -a 16 --chain-id 1337 -p 8545 --steps-tracing --load-state snapshots/AjnaLenderWithdrawEstimator.json --auto-impersonate`
-- In Terminal 2, run `forge create AjnaLenderWithdrawEstimator --rpc-url 127.0.0.1:8545 --private-key 0x2bbf23876aee0b3acd1502986da13a0f714c143fcc8ede8e2821782d75033ad1 --constructor-args 0x6c5c7fD98415168ada1930d44447790959097482`
-- In Terminal 3, run `forge test -vvv --rpc-url http://127.0.0.1:8545`
+- Ask for the `AjnaLenderWithdrawEstimator.json` dump file.
+- In Terminal 1, run `anvil -m "talent dust essay arctic input daughter depth force stadium absorb cruel lemon" -a 16 --chain-id 1337 -p 8545 --steps-tracing --load-state snapshots/AjnaLenderWithdrawEstimator.json --auto-impersonate`.
+- In Terminal 2, run `forge create AjnaLenderWithdrawEstimator --rpc-url 127.0.0.1:8545 --private-key 0x2bbf23876aee0b3acd1502986da13a0f714c143fcc8ede8e2821782d75033ad1 --constructor-args 0x6c5c7fD98415168ada1930d44447790959097482`.
+- In Terminal 3, run `forge test -vvv --rpc-url http://127.0.0.1:8545`.
 
 ```
 Ran 4 tests for test/AjnaLenderWithdrawEstimator.t.sol:AjnaLenderWithdrawEstimatorTest
